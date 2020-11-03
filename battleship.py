@@ -2,9 +2,6 @@
 Игра «Морской бой» на поле 6x6.
 Итоговое практическое задание B7.5 для SkillFactory.
 Используются модули только из стандартной библиотеки Python 3.8.5.
-
-TODO: Авторасстановка кораблей
-TODO: Отображать поле компьютера в скрытом состоянии (без кораблей)
 """
 
 
@@ -15,25 +12,38 @@ import time
 
 CLEAR_SCREEN        = 'cls' if os.name == 'nt' else 'clear'
 TIMEOUT             = 1
-EMPTY_SYMBOL        = 'O'
+EMPTY_SYMBOL        = '~'
 SHIP_SYMBOL         = '■'
 HIT_SYMBOL          = 'X'
 MISS_SYMBOL         = 'T'
 
 
-def print_intro(board1, board2):
+def print_intro(board1, board2, with_ships = True):
     """ Функция очистки экрана и вывода игровых полей. """
+    # Изначально использовался метод draw класса Board, но для более
+    # симпатичного вывода решил использовать эту функцию.
+    # Код метода оставлен в программе и закомментирован.
     os.system(CLEAR_SCREEN)
     print('-' * 50)
-    print('Морской бой')
+    print('Морской бой'.center(50))
     print()
-    print('формат ввода ходов: «строка колонка»')
+    print('формат ввода ходов: «строка колонка»'.center(50))
     print('-' * 50)
     print()
-    print('Ваше поле:')
-    board1.draw(with_ships=True)
-    print('Поле противника:')
-    board2.draw(with_ships=True)
+    print('Игрок'.center(13) + ' ' * 24 + 'Компьютер'.center(13))
+    print()
+    print(' ', *range(1, board1.size + 1), sep='|', end=' ' * 24)
+    print(' ', *range(1, board2.size + 1), sep='|')
+    for row_number, rows in enumerate(zip(board1.state, board2.state), 1):
+        hidden_row1 = [EMPTY_SYMBOL if cell == SHIP_SYMBOL
+                        else cell for cell in rows[0]]
+        hidden_row2 = [EMPTY_SYMBOL if cell == SHIP_SYMBOL
+                        else cell for cell in rows[0]]
+        print(row_number, end='|')
+        print(*rows[0] if with_ships else hidden_row1, sep='|', end=' ' * 24)
+        print(row_number, end='|')
+        print(*rows[1] if with_ships else hidden_row2, sep='|')
+    print()
 
 
 class Board:
@@ -53,23 +63,25 @@ class Board:
                       for row in range(self.size)]
 
 
-    def draw(self, with_ships = True):
-        """
-        Метод отображения игрового поля.
-        Аргументы:
-        with_ships — отображать или, в случае компьютерного игрока,
-        скрывать корабли на поле. Значение по умолчанию: True.
-        """
-        print(' ', *range(1, self.size + 1), sep='|')
-        for row_number, row in enumerate(self.state, 1):
-            print(row_number, end='|')
-            hidden_row = [EMPTY_SYMBOL if cell == SHIP_SYMBOL
-                          else cell for cell in row]
-            print(*row if with_ships else hidden_row, sep='|')
-        print()
+    # def draw(self, with_ships = True):
+    #     """
+    #     Метод отображения игрового поля.
+    #     Аргументы:
+    #     with_ships — отображать или, в случае компьютерного игрока,
+    #     скрывать корабли на поле. Значение по умолчанию: True.
+    #     """
+    #     print(' ', *range(1, self.size + 1), sep='|')
+    #     for row_number, row in enumerate(self.state, 1):
+    #         print(row_number, end='|')
+    #         hidden_row = [EMPTY_SYMBOL if cell == SHIP_SYMBOL
+    #                       else cell for cell in row]
+    #         print(*row if with_ships else hidden_row, sep='|')
+    #     print()
 
 
     def setup(self, auto = True):
+        # Заглушка в виде пустой доски для функции отображения.
+        dummy = Board()
         player_ships = []
         if auto:
             while len(player_ships) < len(self.ships):
@@ -88,7 +100,7 @@ class Board:
                     self.clear()
         else:
             for ship_number, ship_size in enumerate(self.ships, 1):
-                # print_intro(board1, board2)
+                print_intro(self, dummy)
                 print(f'Расстановка — Корабль №{ship_number}, {ship_size}-палубный')
                 orientation = input('Введите ориентацию корабля — '
                                     'горизонтальная (h) или вертикальная (v): ')
@@ -185,58 +197,12 @@ class Ship:
 
 def battleship():
     """ Основная игровая функция. """
-
-    player_ships = []
-    ai_ships = []
     board1 = Board()
     board2 = Board()
 
     # Расстановка кораблей
-    board1.setup()
-    board2.setup()
-    """
-    for ship_number, ship_size in enumerate(ships, 1):
-        print_intro(board1, board2)
-        print(f'Расстановка — Корабль №{ship_number}, {ship_size}-палубный')
-        orientation = input('Введите ориентацию корабля — '
-                            'горизонтальная (h) или вертикальная (v): ')
-        start_position = map(lambda x: x - 1, map(int, input('Введите '
-        'координаты верхней левой точки корабля: ').split()))
-        player_ship = Ship(ship_size, orientation, start_position)
-        player_ships.append(player_ship)
-        board1.add_ship(player_ship)
-    
-    while len(player_ships) < len(ships):
-        try_count = 0
-        while try_count <= 50:
-            try_count += 1
-            player_orientation = random.choice(('h', 'v'))
-            player_start_position = (random.randrange(6), random.randrange(6))
-            player_ship = Ship(ships[len(player_ships)], player_orientation, player_start_position)
-            if board1.is_ship_fit(player_ship):
-                player_ships.append(player_ship)
-                board1.add_ship(player_ship)
-                break
-        if try_count > 50:
-            player_ships = []
-            board1.clear()
-
-    # Расстановка кораблей компьютером
-    while len(ai_ships) < len(ships):
-        try_count = 0
-        while try_count <= 50:
-            try_count += 1
-            ai_orientation = random.choice(('h', 'v'))
-            ai_start_position = (random.randrange(6), random.randrange(6))
-            ai_ship = Ship(ships[len(ai_ships)], ai_orientation, ai_start_position)
-            if board2.is_ship_fit(ai_ship):
-                ai_ships.append(ai_ship)
-                board2.add_ship(ai_ship)
-                break
-        if try_count > 50:
-            ai_ships = []
-            board2.clear()
-    """
+    board1.setup(auto=True)
+    board2.setup(auto=True)
 
     # Перестрелка
     turn_count = 0
@@ -250,6 +216,7 @@ def battleship():
             shot = map(lambda x: x - 1, map(int, input().split()))
         else:
             shot = (random.randrange(6), random.randrange(6))
+            time.sleep(TIMEOUT)
             print(*map(lambda x: x + 1, shot))
 
         # Если выстрел не попал, то меняем текущего игрока.
