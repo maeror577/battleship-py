@@ -105,6 +105,7 @@ class Board:
     def shot(self, coordinates):
         """
         Метод проведения выстрела по указанным координатам.
+        Возвращает True при попадании и Else при промахе.
         Аргументы:
         coordinates — кортеж с двумя координатами
         """
@@ -114,11 +115,13 @@ class Board:
             time.sleep(0.5)
             print('Попадание!')
             time.sleep(0.5)
+            return True
         elif self.state[x][y] == EMPTY_SYMBOL:
             self.state[x][y] = MISS_SYMBOL
             time.sleep(0.5)
             print('Промах!')
             time.sleep(0.5)
+            return False
 
     def is_win(self):
         """
@@ -149,7 +152,7 @@ class Ship:
 
 def battleship():
     """ Основная игровая функция. """
-    ships = [3, 2, 2, 1, 1, 1]
+    ships = [3, 2, 2, 1, 1, 1, 1]
     player_ships = []
     ai_ships = []
     board1 = Board()
@@ -201,19 +204,23 @@ def battleship():
 
     # Перестрелка
     turn_count = 0
+    current_board = board2
     while True:
         turn_count += 1
         print_intro(board1, board2)
         print(f'Ход №{turn_count}')
-        player_shot = map(lambda x: x - 1, map(int, input('Стреляйте: ').split()))
-        board2.shot(player_shot)
-        if board2.is_win():
+        if current_board == board2:
+            shot = map(lambda x: x - 1,
+                       map(int, input('Координаты выстрела: ').split()))
+        else:
+            shot = (random.randrange(6), random.randrange(6))
+        
+        # Если выстрел не попал, то меняем текущего игрока.
+        if not current_board.shot(shot):
+            current_board = board2 if current_board == board1 else board1
+        if current_board.is_win():
             break
-        print_intro(board1, board2)
-        ai_shot = (random.randrange(6), random.randrange(6))
-        board1.shot(ai_shot)
-        if board1.is_win():
-            break
+
     print_intro(board1, board2)
     if board2.is_win():
         print('Вы выиграли!')
