@@ -14,6 +14,7 @@ import time
 
 
 CLEAR_SCREEN        = 'cls' if os.name == 'nt' else 'clear'
+TIMEOUT             = 1
 EMPTY_SYMBOL        = 'O'
 SHIP_SYMBOL         = '■'
 HIT_SYMBOL          = 'X'
@@ -38,6 +39,7 @@ def print_intro(board1, board2):
 class Board:
     """ Класс игрового поле. """
     board_size = 6
+    ships = [3, 2, 2, 1, 1, 1, 1]
 
     def __init__(self):
         self.size = self.board_size
@@ -65,6 +67,37 @@ class Board:
                           else cell for cell in row]
             print(*row if with_ships else hidden_row, sep='|')
         print()
+
+
+    def setup(self, auto = True):
+        player_ships = []
+        if auto:
+            while len(player_ships) < len(self.ships):
+                try_count = 0
+                while try_count <= 50:
+                    try_count += 1
+                    orientation = random.choice(('h', 'v'))
+                    start_position = (random.randrange(6), random.randrange(6))
+                    ship = Ship(self.ships[len(player_ships)], orientation, start_position)
+                    if self.is_ship_fit(ship):
+                        player_ships.append(ship)
+                        self.add_ship(ship)
+                        break
+                if try_count > 50:
+                    player_ships = []
+                    self.clear()
+        else:
+            for ship_number, ship_size in enumerate(self.ships, 1):
+                # print_intro(board1, board2)
+                print(f'Расстановка — Корабль №{ship_number}, {ship_size}-палубный')
+                orientation = input('Введите ориентацию корабля — '
+                                    'горизонтальная (h) или вертикальная (v): ')
+                start_position = map(lambda x: x - 1, map(int, input('Введите '
+                'координаты верхней левой точки корабля: ').split()))
+                player_ship = Ship(ship_size, orientation, start_position)
+                player_ships.append(player_ship)
+                self.add_ship(player_ship)
+
 
     def add_ship(self, ship):
         """
@@ -102,7 +135,7 @@ class Board:
         return True
 
 
-    def shot(self, coordinates):
+    def take_shot(self, coordinates):
         """
         Метод проведения выстрела по указанным координатам.
         Возвращает True при попадании и Else при промахе.
@@ -112,15 +145,15 @@ class Board:
         x, y = coordinates
         if self.state[x][y] == SHIP_SYMBOL:
             self.state[x][y] = HIT_SYMBOL
-            time.sleep(0.5)
+            time.sleep(TIMEOUT)
             print('Попадание!')
-            time.sleep(0.5)
+            time.sleep(TIMEOUT)
             return True
         elif self.state[x][y] == EMPTY_SYMBOL:
             self.state[x][y] = MISS_SYMBOL
-            time.sleep(0.5)
+            time.sleep(TIMEOUT)
             print('Промах!')
-            time.sleep(0.5)
+            time.sleep(TIMEOUT)
             return False
 
     def is_win(self):
@@ -152,13 +185,15 @@ class Ship:
 
 def battleship():
     """ Основная игровая функция. """
-    ships = [3, 2, 2, 1, 1, 1, 1]
+
     player_ships = []
     ai_ships = []
     board1 = Board()
     board2 = Board()
 
-    # Расстановка кораблей игроком
+    # Расстановка кораблей
+    board1.setup()
+    board2.setup()
     """
     for ship_number, ship_size in enumerate(ships, 1):
         print_intro(board1, board2)
@@ -170,7 +205,7 @@ def battleship():
         player_ship = Ship(ship_size, orientation, start_position)
         player_ships.append(player_ship)
         board1.add_ship(player_ship)
-    """
+    
     while len(player_ships) < len(ships):
         try_count = 0
         while try_count <= 50:
@@ -201,6 +236,7 @@ def battleship():
         if try_count > 50:
             ai_ships = []
             board2.clear()
+    """
 
     # Перестрелка
     turn_count = 0
@@ -209,14 +245,15 @@ def battleship():
         turn_count += 1
         print_intro(board1, board2)
         print(f'Ход №{turn_count}')
+        print('Координаты выстрела:', end=' ', flush=True)
         if current_board == board2:
-            shot = map(lambda x: x - 1,
-                       map(int, input('Координаты выстрела: ').split()))
+            shot = map(lambda x: x - 1, map(int, input().split()))
         else:
             shot = (random.randrange(6), random.randrange(6))
-        
+            print(*map(lambda x: x + 1, shot))
+
         # Если выстрел не попал, то меняем текущего игрока.
-        if not current_board.shot(shot):
+        if not current_board.take_shot(shot):
             current_board = board2 if current_board == board1 else board1
         if current_board.is_win():
             break
