@@ -160,13 +160,14 @@ class Board:
             time.sleep(TIMEOUT)
             print('Попадание!')
             time.sleep(TIMEOUT)
-            return True
+            return 1
         elif self.state[x][y] == EMPTY_SYMBOL:
             self.state[x][y] = MISS_SYMBOL
             time.sleep(TIMEOUT)
             print('Промах!')
             time.sleep(TIMEOUT)
-            return False
+            return 0
+        return -1
 
     def is_win(self):
         """
@@ -201,10 +202,12 @@ def battleship():
     board2 = Board()
 
     # Расстановка кораблей
-    board1.setup(auto=True)
-    board2.setup(auto=True)
+    print_intro(board1, board2)
+    auto = input('Расставить корабли автоматически? (y/n) ') in ('y', 'Y')
+    board1.setup(auto)
+    board2.setup()
 
-    # Перестрелка
+    # Начало игры
     turn_count = 0
     current_board = board2
     while True:
@@ -214,6 +217,7 @@ def battleship():
         print('Координаты выстрела:', end=' ', flush=True)
         if current_board == board2:
             shot = map(lambda x: x - 1, map(int, input().split()))
+            #TODO: if shot isn't legit -> retry
         else:
             shot = (random.randrange(6), random.randrange(6))
             time.sleep(TIMEOUT)
@@ -232,8 +236,8 @@ def battleship():
         print('Вы проиграли!')
 
 
-    restart = input('Хотите сыграть ещё раз? (y/n) ')
-    if restart in ('y', 'Y'):
+    restart = input('Хотите сыграть ещё раз? (y/n) ') in ('y', 'Y')
+    if restart:
         battleship()
 
     os.system(CLEAR_SCREEN)
