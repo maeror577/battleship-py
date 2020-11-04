@@ -51,6 +51,7 @@ class Board:
     board_size = 6
     ships = [3, 2, 2, 1, 1, 1, 1]
 
+
     def __init__(self):
         self.size = self.board_size
         self.state = [[EMPTY_SYMBOL for col in range(self.size)]
@@ -89,7 +90,8 @@ class Board:
                 while try_count <= 50:
                     try_count += 1
                     orientation = random.choice(('h', 'v'))
-                    start_position = (random.randrange(6), random.randrange(6))
+                    start_position = (random.randrange(self.size),
+                                      random.randrange(self.size))
                     ship = Ship(self.ships[len(player_ships)], orientation, start_position)
                     if self.is_ship_fit(ship):
                         player_ships.append(ship)
@@ -147,14 +149,38 @@ class Board:
         return True
 
 
-    def take_shot(self, coordinates):
+    def take_shot(self, ai):
         """
         Метод проведения выстрела по указанным координатам.
         Возвращает True при попадании и Else при промахе.
         Аргументы:
         coordinates — кортеж с двумя координатами
         """
-        x, y = coordinates
+        while True:
+            if ai:
+                x, y = (random.randrange(self.size),
+                        random.randrange(self.size))
+                if self.state[x][y] in (MISS_SYMBOL, HIT_SYMBOL):
+                    continue
+                time.sleep(TIMEOUT)
+                print(*map(lambda x: x + 1, (x, y)))
+                break
+            try:
+                x, y = map(lambda x: x - 1, map(int, input().split()))
+            except ValueError:
+                print('Неверный формат ввода. '
+                      'Попробуйте ещё раз: ', end='')
+                continue
+            else:
+                if x < 0 or x > self.size or y < 0 or y > self.size:
+                    print('Таких координат не существует. '
+                          'Попробуйте ещё раз: ', end='')
+                    continue
+                if self.state[x][y] in (MISS_SYMBOL, HIT_SYMBOL):
+                    print('Вы уже стреляли в эту точку. '
+                          'Попробуйте ещё раз: ', end='')
+                    continue
+                break
         if self.state[x][y] == SHIP_SYMBOL:
             self.state[x][y] = HIT_SYMBOL
             time.sleep(TIMEOUT)
@@ -168,6 +194,7 @@ class Board:
             time.sleep(TIMEOUT)
             return 0
         return -1
+
 
     def is_win(self):
         """
@@ -213,27 +240,20 @@ def battleship():
     while True:
         turn_count += 1
         print_intro(board1, board2)
-        print(f'Ход №{turn_count}')
+        print(f'Ход №{turn_count} — ', end='')
+        print('Игрок' if current_board == board2 else 'Компьютер')
         print('Координаты выстрела:', end=' ', flush=True)
-        if current_board == board2:
-            shot = map(lambda x: x - 1, map(int, input().split()))
-            #TODO: if shot isn't legit -> retry
-        else:
-            shot = (random.randrange(6), random.randrange(6))
-            time.sleep(TIMEOUT)
-            print(*map(lambda x: x + 1, shot))
 
-        # Если выстрел не попал, то меняем текущего игрока.
-        if not current_board.take_shot(shot):
+        # Если текущий игрок — компьютер, то ход происходит автоматически,
+        # и если выстрел попал, то не меняем текущего игрока.
+        if not current_board.take_shot(ai=current_board == board1):
             current_board = board2 if current_board == board1 else board1
         if current_board.is_win():
             break
 
+    # Игрок, на котором закончился игровой цикл, является победителем.
     print_intro(board1, board2)
-    if board2.is_win():
-        print('Вы выиграли!')
-    elif board1.is_win():
-        print('Вы проиграли!')
+    print('Вы выиграли!' if current_board == board2 else 'Вы проиграли!')
 
 
     restart = input('Хотите сыграть ещё раз? (y/n) ') in ('y', 'Y')
