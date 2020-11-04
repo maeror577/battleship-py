@@ -18,8 +18,13 @@ HIT_SYMBOL          = 'X'
 MISS_SYMBOL         = 'T'
 
 
-def print_intro(board1, board2, with_ships = True):
-    """ Функция очистки экрана и вывода игровых полей. """
+def print_intro(board1, board2, with_ships = False):
+    """
+    Функция очистки экрана и вывода игровых полей.
+    Аргументы:
+    with_ships — отображать или нет при выводе поля противника расставленные
+    корабли. По умолчанию False.
+    """
     # Изначально использовался метод draw класса Board, но для более
     # симпатичного вывода решил использовать эту функцию.
     # Код метода оставлен в программе и закомментирован.
@@ -35,33 +40,39 @@ def print_intro(board1, board2, with_ships = True):
     print(' ', *range(1, board1.size + 1), sep='|', end=' ' * 24)
     print(' ', *range(1, board2.size + 1), sep='|')
     for row_number, rows in enumerate(zip(board1.state, board2.state), 1):
-        hidden_row1 = [EMPTY_SYMBOL if cell == SHIP_SYMBOL
-                        else cell for cell in rows[0]]
-        hidden_row2 = [EMPTY_SYMBOL if cell == SHIP_SYMBOL
-                        else cell for cell in rows[0]]
+        hidden_row = [EMPTY_SYMBOL if cell == SHIP_SYMBOL
+                        else cell for cell in rows[1]]
         print(row_number, end='|')
-        print(*rows[0] if with_ships else hidden_row1, sep='|', end=' ' * 24)
+        print(*rows[0], sep='|', end=' ' * 24)
         print(row_number, end='|')
-        print(*rows[1] if with_ships else hidden_row2, sep='|')
+        print(*rows[1] if with_ships else hidden_row, sep='|')
     print()
 
 
 class Board:
-    """ Класс игрового поле. """
+    """
+    Класс игрового поле.
+    Атрибуты:
+    size — размер игрового поля.
+    state — текущее состояние игрового поля.
+    ships — список кораблей (объектов класса Ship), находящихся на поле
+    """
     board_size = 6
-    ships = [3, 2, 2, 1, 1, 1, 1]
+    ship_rules = [3, 2, 2, 1, 1, 1, 1]
 
 
     def __init__(self):
         self.size = self.board_size
         self.state = [[EMPTY_SYMBOL for col in range(self.size)]
                       for row in range(self.size)]
+        self.ships = []
 
 
     def clear(self):
         """ Метод приведения игрового поля в изначальное состояние. """
         self.state = [[EMPTY_SYMBOL for col in range(self.size)]
                       for row in range(self.size)]
+        self.ships = []
 
 
     # def draw(self, with_ships = True):
@@ -81,36 +92,47 @@ class Board:
 
 
     def setup(self, auto = True):
+        """
+        Метод расстановки кораблей на поле.
+        Аргументы:
+        auto — расставлять ли корабли автоматически случайным образом.
+        По умолчанию True.
+        """
         # Заглушка в виде пустой доски для функции отображения.
         dummy = Board()
-        player_ships = []
         if auto:
-            while len(player_ships) < len(self.ships):
+            while len(self.ships) < len(self.ship_rules):
+
+                # На случай возникновения тупиковой ситуации, при которой
+                # следующий корабль невозможно разместить, используется
+                # ограниченное количество попыток (50). По их истечению, поле
+                # сбрасывается, и расстановка начинается сначала.
                 try_count = 0
                 while try_count <= 50:
                     try_count += 1
                     orientation = random.choice(('h', 'v'))
                     start_position = (random.randrange(self.size),
                                       random.randrange(self.size))
-                    ship = Ship(self.ships[len(player_ships)], orientation, start_position)
+                    ship = Ship(self.ship_rules[len(self.ships)],
+                                orientation, start_position)
                     if self.is_ship_fit(ship):
-                        player_ships.append(ship)
+                        self.ships.append(ship)
                         self.add_ship(ship)
                         break
                 if try_count > 50:
-                    player_ships = []
                     self.clear()
         else:
-            for ship_number, ship_size in enumerate(self.ships, 1):
+            for ship_number, ship_size in enumerate(self.ship_rules, 1):
                 print_intro(self, dummy)
-                print(f'Расстановка — Корабль №{ship_number}, {ship_size}-палубный')
+                print(f'Расстановка — Корабль №{ship_number}, '
+                      f'{ship_size}-палубный')
                 orientation = input('Введите ориентацию корабля — '
                                     'горизонтальная (h) или вертикальная (v): ')
                 start_position = map(lambda x: x - 1, map(int, input('Введите '
                 'координаты верхней левой точки корабля: ').split()))
-                player_ship = Ship(ship_size, orientation, start_position)
-                player_ships.append(player_ship)
-                self.add_ship(player_ship)
+                ship = Ship(ship_size, orientation, start_position)
+                self.ships.append(ship)
+                self.add_ship(ship)
 
 
     def add_ship(self, ship):
@@ -125,8 +147,7 @@ class Board:
 
     def is_ship_fit(self, ship):
         """
-        Метод проверки возможности размещения корабля в заданных
-        координатах.
+        Метод проверки возможности размещения корабля в заданных координатах.
         Аргументы:
         ship — объект класса Ship
         """
@@ -151,10 +172,10 @@ class Board:
 
     def take_shot(self, ai):
         """
-        Метод проведения выстрела по указанным координатам.
-        Возвращает True при попадании и Else при промахе.
+        Метод проведения выстрела по указанным координатам. Возвращает True при
+        попадании и Else при промахе.
         Аргументы:
-        coordinates — кортеж с двумя координатами
+        ai — кто делает выстрел: компьютер или человек.
         """
         while True:
             if ai:
@@ -197,20 +218,26 @@ class Board:
 
 
     def is_win(self):
-        """
-        Метод проверки игрового поля на предмет окончания игры.
-        Если не осталось ни одного символа корабля, значит,
-        игра окончена.
-        """
+        """ Метод проверки игрового поля на предмет окончания игры. """
         for row in self.state:
             for cell in row:
                 if cell == SHIP_SYMBOL:
                     return False
+        # Если не осталось ни одного символа корабля, значит, игра окончена.
         return True
 
 
 class Ship:
-    """ Класс корабля. """
+    """
+    Класс корабля.
+    Атрибуты:
+    size — размер корабля.
+    orientation — горизонтально или вертикально установлен корабль.
+    width — условная ширина корабля.
+    height — условная длина корабля.
+    x, y — координаты левой верхней точки корабля.
+    coordinates — список всех пар координат корабля.
+    """
     def __init__(self, size, orientation, start_position):
         self.size = size
         self.orientation = orientation
@@ -241,7 +268,7 @@ def battleship():
         turn_count += 1
         print_intro(board1, board2)
         print(f'Ход №{turn_count} — ', end='')
-        print('Игрок' if current_board == board2 else 'Компьютер')
+        print('Компьютер' if current_board == board1 else 'Игрок')
         print('Координаты выстрела:', end=' ', flush=True)
 
         # Если текущий игрок — компьютер, то ход происходит автоматически,
@@ -253,7 +280,7 @@ def battleship():
 
     # Игрок, на котором закончился игровой цикл, является победителем.
     print_intro(board1, board2)
-    print('Вы выиграли!' if current_board == board2 else 'Вы проиграли!')
+    print('Вы проиграли!' if current_board == board1 else 'Вы выиграли!')
 
 
     restart = input('Хотите сыграть ещё раз? (y/n) ') in ('y', 'Y')
