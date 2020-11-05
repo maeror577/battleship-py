@@ -51,11 +51,11 @@ def print_intro(board1, board2, with_ships = False):
 
 class Board:
     """
-    Класс игрового поле.
+    Класс игрового поля.
     Атрибуты:
     size — размер игрового поля.
     state — текущее состояние игрового поля.
-    ships — список кораблей (объектов класса Ship), находящихся на поле
+    ships — список кораблей (объектов класса Ship), находящихся на поле.
     """
     board_size = 6
     ship_rules = [3, 2, 2, 1, 1, 1, 1]
@@ -173,7 +173,7 @@ class Board:
     def take_shot(self, ai):
         """
         Метод проведения выстрела по указанным координатам. Возвращает True при
-        попадании и Else при промахе.
+        попадании и False при промахе.
         Аргументы:
         ai — кто делает выстрел: компьютер или человек.
         """
@@ -188,20 +188,17 @@ class Board:
                 break
             try:
                 x, y = map(lambda x: x - 1, map(int, input().split()))
-            except ValueError:
-                print('Неверный формат ввода. '
-                      'Попробуйте ещё раз: ', end='')
-                continue
-            else:
                 if x < 0 or x > self.size or y < 0 or y > self.size:
-                    print('Таких координат не существует. '
-                          'Попробуйте ещё раз: ', end='')
-                    continue
+                    raise IndexError('Таких координат не существует.')
                 if self.state[x][y] in (MISS_SYMBOL, HIT_SYMBOL):
-                    print('Вы уже стреляли в эту точку. '
-                          'Попробуйте ещё раз: ', end='')
-                    continue
+                    raise IndexError('Вы уже стреляли в эту точку.')
+            except ValueError:
+                print('Неверный формат ввода. Попробуйте ещё раз: ', end='')
+            except IndexError as error_message:
+                print(f'{error_message} Попробуйте ещё раз: ', end='')
+            else:
                 break
+
         if self.state[x][y] == SHIP_SYMBOL:
             self.state[x][y] = HIT_SYMBOL
             time.sleep(TIMEOUT)
