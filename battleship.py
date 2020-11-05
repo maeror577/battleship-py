@@ -35,7 +35,9 @@ def print_intro(board1, board2, with_ships = False):
     print('формат ввода ходов: «строка колонка»'.center(50))
     print('-' * 50)
     print()
-    print('Игрок'.center(13) + ' ' * 24 + 'Компьютер'.center(13))
+    print('  Игрок' + ' ' * 32 + 'Компьютер')
+    print(f'  Кораблей: {len(board1.ships)}'
+            + ' ' * 26 + f'Кораблей: {len(board2.ships)}')
     print()
     print(' ', *range(1, board1.size + 1), sep='|', end=' ' * 24)
     print(' ', *range(1, board2.size + 1), sep='|')
@@ -161,6 +163,8 @@ class Board:
         for x in range(ship.x - 1, ship.x + ship.height + 1):
             for y in range(ship.y - 1, ship.y + ship.width + 1):
                 try:
+                    if x < 0 or y < 0:
+                        raise IndexError
                     if self.state[x][y] != EMPTY_SYMBOL:
                         return False
                 except IndexError:
@@ -193,25 +197,50 @@ class Board:
                 if self.state[x][y] in (MISS_SYMBOL, HIT_SYMBOL):
                     raise IndexError('Вы уже стреляли в эту точку.')
             except ValueError:
-                print('Неверный формат ввода. Попробуйте ещё раз: ', end='')
+                print('Неверный формат ввода. Попробуйте ещё раз:', end=' ')
             except IndexError as error_message:
-                print(f'{error_message} Попробуйте ещё раз: ', end='')
+                print(f'{error_message} Попробуйте ещё раз:', end=' ')
             else:
                 break
 
         if self.state[x][y] == SHIP_SYMBOL:
             self.state[x][y] = HIT_SYMBOL
             time.sleep(TIMEOUT)
-            print('Попадание!')
+            print('Попадание!', end=' ', flush=True)
+            if self.is_ship_dead(x, y):
+                print('Корабль потоплен!')
+                self.ships.pop()
+            else:
+                print('Корабль ранен!')
             time.sleep(TIMEOUT)
-            return 1
-        elif self.state[x][y] == EMPTY_SYMBOL:
-            self.state[x][y] = MISS_SYMBOL
-            time.sleep(TIMEOUT)
-            print('Промах!')
-            time.sleep(TIMEOUT)
-            return 0
-        return -1
+            return True
+
+        self.state[x][y] = MISS_SYMBOL
+        time.sleep(TIMEOUT)
+        print('Промах!')
+        time.sleep(TIMEOUT)
+        return False
+
+
+    def is_ship_dead(self, shot_x, shot_y):
+        """
+        Метод проверки, уничтожен ли корабль. Если уничтожен, возвращает True,
+        если нет — False.
+        Аргументы:
+        shot_x, shot_y — координаты точки, вокруг которой происходит проверка.
+        """
+        # Вокруг точки проверки есть хотя бы один символ корабля, значит,
+        # корабль ещё не потоплен.
+        for x in range(shot_x - 1, shot_x + 2):
+            for y in range(shot_y - 1, shot_y + 2):
+                try:
+                    if x < 0 or y < 0:
+                        raise IndexError
+                    if self.state[x][y] == SHIP_SYMBOL:
+                        return False
+                except IndexError:
+                    continue
+        return True
 
 
     def is_win(self):
@@ -264,7 +293,7 @@ def battleship():
     while True:
         turn_count += 1
         print_intro(board1, board2)
-        print(f'Ход №{turn_count} — ', end='')
+        print(f'Ход №{turn_count} —', end=' ')
         print('Компьютер' if current_board == board1 else 'Игрок')
         print('Координаты выстрела:', end=' ', flush=True)
 
