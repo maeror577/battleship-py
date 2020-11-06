@@ -11,14 +11,17 @@ import time
 
 
 CLEAR_SCREEN        = 'cls' if os.name == 'nt' else 'clear'
+WIDTH               = 50
 TIMEOUT             = 1
 EMPTY_SYMBOL        = '~'
 SHIP_SYMBOL         = '■'
 HIT_SYMBOL          = 'X'
 MISS_SYMBOL         = '·'
+BOARD_SIZE          = 6
+SHIP_RULES          = [3, 2, 2, 1, 1, 1, 1]
 
 
-def print_intro(board1, board2, with_ships = True):
+def print_intro(board1, board2, with_ships=True):
     """
     Функция очистки экрана и вывода игровых полей.
     Аргументы:
@@ -29,25 +32,29 @@ def print_intro(board1, board2, with_ships = True):
     # симпатичного вывода решил использовать эту функцию.
     # Код метода оставлен в программе и закомментирован.
     os.system(CLEAR_SCREEN)
-    print('-' * 50)
-    print('Морской бой'.center(50))
+
+    print('-' * WIDTH)
+    print('Морской бой'.center(WIDTH))
     print()
-    print('формат ввода ходов: «строка колонка»'.center(50))
-    print('-' * 50)
+    print('формат ввода ходов: «строка колонка»'.center(WIDTH))
+    print('-' * WIDTH)
     print()
-    print('  Игрок' + ' ' * 32 + 'Компьютер')
-    print(f'  Кораблей: {len(board1.ships)}'
-            + ' ' * 26 + f'Кораблей: {len(board2.ships)}')
+    print('Игрок'.center(WIDTH // 2) + 'Компьютер'.center(WIDTH // 2))
+    print(f'Кораблей: {len(board1.ships)}'.center(WIDTH // 2)
+        + f'Кораблей: {len(board2.ships)}'.center(WIDTH // 2))
     print()
-    print(' ', *range(1, board1.size + 1), sep='|', end=' ' * 24)
-    print(' ', *range(1, board2.size + 1), sep='|')
+
+    col_numbers1 = ' ' + '|'.join(map(str, range(1, board1.size + 1)))
+    col_numbers2 = ' ' + '|'.join(map(str, range(1, board2.size + 1)))
+    print(col_numbers1.center(WIDTH // 2) + col_numbers2.center(WIDTH // 2))
     for row_number, rows in enumerate(zip(board1.state, board2.state), 1):
         hidden_row = [EMPTY_SYMBOL if cell == SHIP_SYMBOL
                         else cell for cell in rows[1]]
-        print(row_number, end='|')
-        print(*rows[0], sep='|', end=' ' * 24)
-        print(row_number, end='|')
-        print(*rows[1] if with_ships else hidden_row, sep='|')
+        row1 = str(row_number) + '|' + '|'.join(map(str, rows[0]))
+        row2 = str(row_number) + '|' + '|'.join(map(str, rows[1])) \
+               if with_ships else \
+               str(row_number) + '|' + '|'.join(map(str, hidden_row))
+        print(row1.center(WIDTH // 2) + row2.center(WIDTH // 2))
     print()
 
 
@@ -59,8 +66,8 @@ class Board:
     state — текущее состояние игрового поля.
     ships — список кораблей (объектов класса Ship), находящихся на поле.
     """
-    board_size = 6
-    ship_rules = [3, 2, 2, 1, 1, 1, 1]
+    board_size = BOARD_SIZE
+    ship_rules = SHIP_RULES
 
 
     def __init__(self):
@@ -93,7 +100,7 @@ class Board:
     #     print()
 
 
-    def setup(self, auto = True):
+    def setup(self, auto=True):
         """
         Метод расстановки кораблей на поле.
         Аргументы:
@@ -154,8 +161,8 @@ class Board:
         ship — объект класса Ship
         """
         # Проверяем, помещается ли корабль целиком на поле.
-        if ship.x + ship.height - 1 >= self.size or \
-           ship.y + ship.width - 1 >= self.size:
+        if (ship.x + ship.height - 1 >= self.size or
+            ship.y + ship.width - 1 >= self.size):
             return False
 
         # Если да, то проверяем, нет ли в радиусе одной клетки от него
@@ -229,17 +236,11 @@ class Board:
         Аргументы:
         shot_x, shot_y — координаты точки, вокруг которой происходит проверка.
         """
-        # Вокруг точки проверки есть хотя бы один символ корабля, значит,
-        # корабль ещё не потоплен.
-        for x in range(shot_x - 1, shot_x + 2):
-            for y in range(shot_y - 1, shot_y + 2):
-                try:
-                    if x < 0 or y < 0:
-                        raise IndexError
-                    if self.state[x][y] == SHIP_SYMBOL:
-                        return False
-                except IndexError:
-                    continue
+        dead_ship = [ship for ship in self.ships
+                     if (shot_x, shot_y) in ship.coordinates][0]
+        for x, y in dead_ship.coordinates:
+            if self.state[x][y] == SHIP_SYMBOL:
+                return False
         return True
 
 
@@ -251,7 +252,7 @@ class Board:
         shot_x, shot_y — координаты точки выстрела, по которой определяется,
         в какой именно корабль совершён выстрел.
         """
-        dead_ship = [ship for ship in self.ships \
+        dead_ship = [ship for ship in self.ships
                      if (shot_x, shot_y) in ship.coordinates][0]
         for x in range(dead_ship.x - 1, dead_ship.x + dead_ship.height + 1):
             for y in range(dead_ship.y - 1, dead_ship.y + dead_ship.width + 1):
