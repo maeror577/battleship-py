@@ -15,10 +15,10 @@ TIMEOUT             = 1
 EMPTY_SYMBOL        = '~'
 SHIP_SYMBOL         = '■'
 HIT_SYMBOL          = 'X'
-MISS_SYMBOL         = 'T'
+MISS_SYMBOL         = '·'
 
 
-def print_intro(board1, board2, with_ships = False):
+def print_intro(board1, board2, with_ships = True):
     """
     Функция очистки экрана и вывода игровых полей.
     Аргументы:
@@ -192,7 +192,7 @@ class Board:
                 break
             try:
                 x, y = map(lambda x: x - 1, map(int, input().split()))
-                if x < 0 or x > self.size or y < 0 or y > self.size:
+                if x < 0 or x >= self.size or y < 0 or y >= self.size:
                     raise IndexError('Таких координат не существует.')
                 if self.state[x][y] in (MISS_SYMBOL, HIT_SYMBOL):
                     raise IndexError('Вы уже стреляли в эту точку.')
@@ -209,7 +209,7 @@ class Board:
             print('Попадание!', end=' ', flush=True)
             if self.is_ship_dead(x, y):
                 print('Корабль потоплен!')
-                self.ships.pop()
+                self.ships.pop(self.ships.index(self.mark_dead_ship(x, y)))
             else:
                 print('Корабль ранен!')
             time.sleep(TIMEOUT)
@@ -241,6 +241,28 @@ class Board:
                 except IndexError:
                     continue
         return True
+
+
+    def mark_dead_ship(self, shot_x, shot_y):
+        """
+        Метод, помечающий символом выстрела все ячейки вокруг убитого корабля.
+        Возвращает убитый корабль — объект класса Ship.
+        Аргументы:
+        shot_x, shot_y — координаты точки выстрела, по которой определяется,
+        в какой именно корабль совершён выстрел.
+        """
+        dead_ship = [ship for ship in self.ships \
+                     if (shot_x, shot_y) in ship.coordinates][0]
+        for x in range(dead_ship.x - 1, dead_ship.x + dead_ship.height + 1):
+            for y in range(dead_ship.y - 1, dead_ship.y + dead_ship.width + 1):
+                try:
+                    if x < 0 or y < 0:
+                        raise IndexError
+                    if self.state[x][y] == EMPTY_SYMBOL:
+                        self.state[x][y] = MISS_SYMBOL
+                except IndexError:
+                    continue
+        return dead_ship
 
 
     def is_win(self):
